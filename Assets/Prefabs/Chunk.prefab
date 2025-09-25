@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2724953169430158494}
   - component: {fileID: 81167003113896843}
   - component: {fileID: 73254710556477022}
+  - component: {fileID: 4749053746482728899}
   m_Layer: 0
   m_Name: Chunk
   m_TagString: Untagged
@@ -67,7 +68,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c5bd6a2ed05409fcd96528d9ba4a1c84, type: 2}
+  - {fileID: 2100000, guid: a1bda88ad2fc94f46b503631533aa43a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -103,3 +104,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Terrain.Chunk
   chunkCoordinate: {x: 0, y: 0, z: 0}
+--- !u!64 &4749053746482728899
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4797768151595128445}
+  m_Material: {fileID: 13400000, guid: 6315f16a2ff5c62b8acc905323ffd501, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 1
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: -1
+  m_Mesh: {fileID: 0}

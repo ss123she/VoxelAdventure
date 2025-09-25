@@ -1,4 +1,4 @@
-using Unity.Collections;
+using NaiveSurfaceNets;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -6,125 +6,111 @@ using UnityEngine.Rendering;
 
 namespace Terrain
 {
-    [RequireComponent(typeof(MeshFilter))]
+    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
     public class Chunk : MonoBehaviour
     {
         public Vector3Int chunkCoordinate;
         private int _gridSize;
-
-        private NativeArray<float> _noiseDataNative;
-        private NativeList<float3> _vertices;
-        private NativeList<int> _triangles;
         
+        private NaiveSurfaceNets.Chunk _data;
+        private NaiveSurfaceNets.Mesher _mesher;
+
         private JobHandle _generationHandle;
-        private bool _isGenerating;
+        private bool _isGeneratingData;
         
         private MeshFilter _meshFilter;
-
+        private MeshCollider _meshCollider;
+        
         private void Awake()
         {
             _meshFilter = GetComponent<MeshFilter>();
+            _meshCollider = GetComponent<MeshCollider>();
         }
 
-        public void StartGeneration(int gridSize, float terrainSurface, float terrainHeight, float groundLevel, float noiseScale)
+        public void StartGeneration(TerrainSettings settings)
         {
-            _gridSize = gridSize;
+            _gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
         
-            var size = _gridSize + 1;
-            var totalSize = size * size * size;
-            var offset = new Vector3(chunkCoordinate.x * _gridSize, 0, chunkCoordinate.z * _gridSize);
+            _data ??= new NaiveSurfaceNets.Chunk(); 
+            _mesher ??= new NaiveSurfaceNets.Mesher();
 
-            _noiseDataNative = new NativeArray<float>(totalSize, Allocator.Persistent);
-            _vertices = new NativeList<float3>(Allocator.Persistent);
-            _triangles = new NativeList<int>(Allocator.Persistent);
-        
+            var offset = new float3(
+                chunkCoordinate.x * _gridSize,
+                chunkCoordinate.y * _gridSize,
+                chunkCoordinate.z * _gridSize);
+
             var noiseJob = new NoiseJob
             {
-                DataNative = _noiseDataNative,
-                ChunkSize = _gridSize,
-                NoiseScale = noiseScale,
+                DataNative = _data.data,
+                CaveDensity = settings.caveDensity,
                 Offset = offset,
-                TerrainHeight = terrainHeight,
-                GroundLevel = groundLevel
+                NoiseScale = settings.noiseScale,
+                TerrainHeight = settings.terrainHeight,
+                GroundLevel = settings.groundLevel,
+                Lacunarity = settings.lacunarity,
+                Octaves = settings.octaves,
+                Persistence = settings.persistence,
+                GenerationMode = settings.generationMode
             };
-            var nsJobHandle = noiseJob.Schedule(totalSize, 64);
 
-            var mcJob = new MarchingCubesJob
-            {
-                VoxelData = _noiseDataNative,
-                TriangleTable = MarchingTable.TrianglesNative,
-                CornerTable = MarchingTable.CornersNative,
-                EdgeConnectionTable = MarchingTable.EdgeConnectionsNative,
-                GridSize = size,
-                SurfaceLevel = terrainSurface,
-                Vertices = _vertices,
-                Triangles = _triangles
-            };
-            
-            _generationHandle = mcJob.Schedule(nsJobHandle);
-            _isGenerating = true;
+            _generationHandle = noiseJob.Schedule(_data.data.Length, 64);
+            _isGeneratingData = true;
+
         }
         
         private void LateUpdate()
         {
-            if (!_isGenerating)
+            if (!_isGeneratingData)
                 return;
-            
+        
             if (!_generationHandle.IsCompleted)
                 return;
-            
+        
             _generationHandle.Complete();
-            ApplyMesh();
-            _isGenerating = false;
-        }
-    
-        private void ApplyMesh()
-        {
-            if (_vertices.Length == 0)
+            _isGeneratingData = false;
+        
+            _mesher.StartMeshJob(_data, Mesher.NormalCalculationMode.FromSDF);
+            _mesher.WaitForMeshJob();
+
+            if (_mesher.Vertices.Length == 0)
             {
-                DisposeNativeData();
+                if (_meshFilter.mesh) _meshFilter.mesh.Clear();
                 return;
             }
-            
-            var mesh = new Mesh();
-            mesh.indexFormat = _vertices.Length > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-        
-            mesh.SetVertexBufferParams(_vertices.Length, new VertexAttributeDescriptor(VertexAttribute.Position));
-            mesh.SetVertexBufferData(_vertices.AsArray(), 0, 0, _vertices.Length);
-            mesh.SetIndexBufferParams(_triangles.Length, IndexFormat.UInt32);
-            mesh.SetIndexBufferData(_triangles.AsArray(), 0, 0, _triangles.Length);
-        
-            mesh.subMeshCount = 1;
-            mesh.SetSubMesh(0, new SubMeshDescriptor(0, _triangles.Length));
-            
-            mesh.RecalculateBounds();
-            mesh.RecalculateNormals();
-        
-            _meshFilter.mesh = mesh;
-        
-            DisposeNativeData();
-        }
 
-        private void DisposeNativeData()
+            if (!_meshFilter.mesh)
+                _meshFilter.mesh = new Mesh();
+        
+            _meshFilter.mesh.SetMesh(_mesher);
+            _meshCollider.sharedMesh = _meshFilter.mesh;
+        }
+        
+        public void CompleteJobs()
         {
-            if (_noiseDataNative.IsCreated) _noiseDataNative.Dispose();
-            if (_vertices.IsCreated) _vertices.Dispose();
-            if (_triangles.IsCreated) _triangles.Dispose();
+            if (!_isGeneratingData) return;
+            
+            _generationHandle.Complete();
+            _isGeneratingData = false;
         }
 
-        private void OnDestroy()
-        { 
-            if (_isGenerating)
+        void OnDestroy()
+        {
+            if (_isGeneratingData)
                 _generationHandle.Complete();
             
-            DisposeNativeData();
+            _data?.Dispose();
+            _mesher?.Dispose();
         }
         
         private void OnDrawGizmosSelected()
         {
+            if (_data == null) return;
+            
+            const int gridSize = NaiveSurfaceNets.Chunk.ChunkSize;
+            
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireCube(transform.position + new Vector3(_gridSize / 2f, _gridSize / 2f, _gridSize / 2f), 
-                new Vector3(_gridSize, _gridSize, _gridSize));
+            Gizmos.DrawWireCube(transform.position + new Vector3(gridSize / 2f - 0.5f, gridSize / 2f - 0.5f, gridSize / 2f - 0.5f),
+                new Vector3(gridSize, gridSize, gridSize));
         }
     }
 }

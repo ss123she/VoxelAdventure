@@ -9,25 +9,25 @@ namespace Terrain
         private Transform player;
 
         [SerializeField] private GameObject chunkPrefab;
-        [SerializeField] private int viewDistance = 4;
+        [SerializeField] private TerrainSettings terrainSettings;
+        
+        [SerializeField] private int viewDistanceHorizontal = 4;
+        [SerializeField] private int viewDistanceVertical = 2;
 
-        [Header("Chunk Generation Settings")] [SerializeField]
-        private int chunkSize = 20;
-
-        [SerializeField] private float terrainSurface = 0.5f;
-        [SerializeField] private float terrainHeight = 4.0f;
-        [SerializeField] private float groundLevel = 2.0f;
-        [SerializeField] private float noiseScale = 0.04f;
-
-        private readonly Dictionary<Vector2Int, Chunk> _activeChunks = new();
-        private Vector2Int _lastPlayerChunkCoord;
+        private const int ChunkSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
+        
+        private readonly Dictionary<Vector3Int, Chunk> _activeChunks = new();
+        private Vector3Int _lastPlayerChunkCoord;
         
         private readonly Queue<Chunk> _chunkPool = new();
 
         private void Start()
         {
-            int initialPoolSize = (viewDistance * 2 + 1) * 2;
-            for (int i = 0; i < initialPoolSize; i++)
+            var poolSizeX = viewDistanceHorizontal * 2 + 1;
+            var poolSizeY = viewDistanceVertical * 2 + 1;
+            var initialPoolSize = poolSizeX * poolSizeY * poolSizeX;
+            
+            for (var i = 0; i < initialPoolSize; i++)
             {
                 var chunkObject = Instantiate(chunkPrefab, Vector3.zero, Quaternion.identity, transform);
                 chunkObject.SetActive(false);
@@ -36,6 +36,7 @@ namespace Terrain
             
             UpdateChunks();
         }
+
 
         private void Update()
         {
@@ -46,11 +47,12 @@ namespace Terrain
             UpdateChunks();
         }
 
-        private Vector2Int GetChunkCoordinate(Vector3 position)
+        private Vector3Int GetChunkCoordinate(Vector3 position)
         {
-            return new Vector2Int(
-                Mathf.FloorToInt(position.x / chunkSize),
-                Mathf.FloorToInt(position.z / chunkSize)
+            return new Vector3Int(
+                Mathf.FloorToInt(position.x / ChunkSize),
+                Mathf.FloorToInt(position.y / ChunkSize),
+                Mathf.FloorToInt(position.z / ChunkSize)
             );
         }
 
@@ -58,31 +60,40 @@ namespace Terrain
         {
             var playerChunkCoord = GetChunkCoordinate(player.position);
 
-            for (var x = -viewDistance; x <= viewDistance; x++)
-            for (var z = -viewDistance; z <= viewDistance; z++)
+            for (var x = -viewDistanceHorizontal; x <= viewDistanceHorizontal; x++)
+            for (var y = -viewDistanceVertical; y <= viewDistanceVertical; y++)
+            for (var z = -viewDistanceHorizontal; z <= viewDistanceHorizontal; z++)
             {
-                var coord = new Vector2Int(playerChunkCoord.x + x, playerChunkCoord.y + z);
+                var coord = new Vector3Int(
+                    playerChunkCoord.x + x, 
+                    playerChunkCoord.y + y, 
+                    playerChunkCoord.z + z
+                );
 
                 if (!_activeChunks.ContainsKey(coord))
-                    GetAndSetupChunk(new Vector3Int(coord.x, 0, coord.y));
+                    GetAndSetupChunk(coord);
             }
 
-            var chunksToReturn = new List<Vector2Int>();
+            var chunksToReturn = new List<Vector3Int>();
             foreach (var chunk in _activeChunks)
             {
                 var coord = chunk.Key;
-                var distance = Vector2.Distance(coord, playerChunkCoord);
+                
+                var horzDistance = Vector2.Distance(new Vector2(coord.x, coord.z), new Vector2(playerChunkCoord.x, playerChunkCoord.z));
+                var vertDistance = Mathf.Abs(coord.y - playerChunkCoord.y);
 
-                if (distance > viewDistance + 1) chunksToReturn.Add(coord);
+                if (horzDistance > viewDistanceHorizontal + 1 || vertDistance > viewDistanceVertical + 1)
+                {
+                    chunksToReturn.Add(coord);
+                }
             }
 
             foreach (var coord in chunksToReturn)
-                ReturnChunkToPool(new Vector3Int(coord.x, 0, coord.y));
+                ReturnChunkToPool(coord);
         }
-
         private void GetAndSetupChunk(Vector3Int coord)
         {
-            var position = new Vector3(coord.x * chunkSize, 0, coord.z * chunkSize);
+            var position = new Vector3(coord.x * ChunkSize, coord.y * ChunkSize, coord.z * ChunkSize);
             
             Chunk chunkScript;
             if (_chunkPool.Count > 0)
@@ -97,22 +108,24 @@ namespace Terrain
                 chunkScript = chunkObject.GetComponent<Chunk>();
             }
             
-            chunkScript.name = $"Chunk {coord.x}, {coord.z}";
+            chunkScript.name = $"Chunk {coord.x}, {coord.y}, {coord.z}";
             chunkScript.chunkCoordinate = coord;
-            chunkScript.StartGeneration(chunkSize, terrainSurface, terrainHeight, groundLevel, noiseScale);
+            chunkScript.StartGeneration(terrainSettings);
 
-            _activeChunks.Add(new Vector2Int(coord.x, coord.z), chunkScript);
+            _activeChunks.Add(coord, chunkScript);
         }
+
+
 
         private void ReturnChunkToPool(Vector3Int coord)
         {
-            var coord2D = new Vector2Int(coord.x, coord.z);
-            if (!_activeChunks.TryGetValue(coord2D, out var chunk)) return;
+            if (!_activeChunks.TryGetValue(coord, out var chunk)) return;
 
+            chunk.CompleteJobs();
             chunk.gameObject.SetActive(false);
             _chunkPool.Enqueue(chunk);
             
-            _activeChunks.Remove(coord2D);
+            _activeChunks.Remove(coord);
         }
     }
 }
