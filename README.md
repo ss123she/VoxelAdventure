@@ -2,6 +2,8 @@
 
 This project was created to try to implement smooth terrain generation with Jobs and chunk pooling for a bit of optimization.
 
+![alt text]https://github.com/ss123she/VoxelAdventure/blob/master/image.png
+
 ## Requirements
 
 - Unity (i used 6000.2.3f1)
