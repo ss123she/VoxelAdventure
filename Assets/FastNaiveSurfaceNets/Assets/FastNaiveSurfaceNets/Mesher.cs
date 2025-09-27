@@ -98,11 +98,13 @@ namespace NaiveSurfaceNets
 
 
 
-		public void StartMeshJob(Chunk chunk, NormalCalculationMode normalCalculationMode)
+		public JobHandle StartMeshJob(Chunk chunk, NormalCalculationMode normalCalculationMode)
 		{
 			mesherJob.recalculateNormals = normalCalculationMode == NormalCalculationMode.Recalculate;
 			mesherJob.volume = chunk.data;
 			meshJobHandle = mesherJob.Schedule();
+			
+			return meshJobHandle;
 		}
 		public bool IsFinished() => meshJobHandle.IsCompleted;
 		public void WaitForMeshJob() => meshJobHandle.Complete();

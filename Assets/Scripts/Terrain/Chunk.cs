@@ -2,42 +2,43 @@ using NaiveSurfaceNets;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Terrain
 {
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
+    [RequireComponent(typeof(MeshFilter))]
     public class Chunk : MonoBehaviour
     {
-        public Vector3Int chunkCoordinate;
-        private int _gridSize;
+        private enum ChunkState
+        {
+            Idle,
+            GeneratingData,
+            GeneratingMesh,
+            Ready
+        }
         
+        public Vector3Int chunkCoordinate;
+
         private NaiveSurfaceNets.Chunk _data;
         private NaiveSurfaceNets.Mesher _mesher;
-
-        private JobHandle _generationHandle;
-        private bool _isGeneratingData;
-        
         private MeshFilter _meshFilter;
-        private MeshCollider _meshCollider;
         
+        private JobHandle _dataGenerationHandle;
+        private JobHandle _meshGenerationHandle;
+        private ChunkState _currentState = ChunkState.Idle;
+
         private void Awake()
         {
             _meshFilter = GetComponent<MeshFilter>();
-            _meshCollider = GetComponent<MeshCollider>();
+            _data ??= new NaiveSurfaceNets.Chunk();
+            _mesher ??= new NaiveSurfaceNets.Mesher();
         }
 
         public void StartGeneration(TerrainSettings settings)
         {
-            _gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
-        
-            _data ??= new NaiveSurfaceNets.Chunk(); 
-            _mesher ??= new NaiveSurfaceNets.Mesher();
-
-            var offset = new float3(
-                chunkCoordinate.x * _gridSize,
-                chunkCoordinate.y * _gridSize,
-                chunkCoordinate.z * _gridSize);
+            if (_currentState != ChunkState.Idle) return;
+            
+            var gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
+            var offset = new float3(chunkCoordinate.x * gridSize, chunkCoordinate.y * gridSize, chunkCoordinate.z * gridSize);
 
             var noiseJob = new NoiseJob
             {
@@ -53,64 +54,72 @@ namespace Terrain
                 GenerationMode = settings.generationMode
             };
 
-            _generationHandle = noiseJob.Schedule(_data.data.Length, 64);
-            _isGeneratingData = true;
-
+            _dataGenerationHandle = noiseJob.Schedule(_data.data.Length, 64);
+            _currentState = ChunkState.GeneratingData;
         }
         
-        private void LateUpdate()
+        public bool IsDataGenerationCompleted()
         {
-            if (!_isGeneratingData)
-                return;
-        
-            if (!_generationHandle.IsCompleted)
-                return;
-        
-            _generationHandle.Complete();
-            _isGeneratingData = false;
-        
-            _mesher.StartMeshJob(_data, Mesher.NormalCalculationMode.FromSDF);
-            _mesher.WaitForMeshJob();
+            return _currentState == ChunkState.GeneratingData && _dataGenerationHandle.IsCompleted;
+        }
 
+        public void StartMeshGeneration()
+        {
+            if (_currentState != ChunkState.GeneratingData) return;
+
+            _dataGenerationHandle.Complete();
+            _meshGenerationHandle = _mesher.StartMeshJob(_data, Mesher.NormalCalculationMode.FromSDF);
+            _currentState = ChunkState.GeneratingMesh;
+        }
+        
+        public bool IsMeshGenerationCompleted()
+        {
+            return _currentState == ChunkState.GeneratingMesh && _meshGenerationHandle.IsCompleted;
+        }
+
+        public void ApplyMesh()
+        {
+            if (_currentState != ChunkState.GeneratingMesh) return;
+            
+            _meshGenerationHandle.Complete();
+            
             if (_mesher.Vertices.Length == 0)
             {
                 if (_meshFilter.mesh) _meshFilter.mesh.Clear();
-                return;
             }
-
-            if (!_meshFilter.mesh)
-                _meshFilter.mesh = new Mesh();
-        
-            _meshFilter.mesh.SetMesh(_mesher);
-            _meshCollider.sharedMesh = _meshFilter.mesh;
+            else
+            {
+                if (!_meshFilter.mesh)
+                {
+                    _meshFilter.mesh = new Mesh();
+                }
+                _meshFilter.mesh.SetMesh(_mesher);
+            }
+            
+            _currentState = ChunkState.Ready;
         }
         
-        public void CompleteJobs()
+        public void CancelAndClear()
         {
-            if (!_isGeneratingData) return;
+            if (_currentState == ChunkState.GeneratingData || _currentState == ChunkState.GeneratingMesh)
+            {
+                _dataGenerationHandle.Complete();
+                _meshGenerationHandle.Complete();
+            }
             
-            _generationHandle.Complete();
-            _isGeneratingData = false;
+            if (_meshFilter.mesh)
+            {
+                _meshFilter.mesh.Clear();
+            }
+            
+            _currentState = ChunkState.Idle;
         }
 
-        void OnDestroy()
+        private void OnDestroy()
         {
-            if (_isGeneratingData)
-                _generationHandle.Complete();
-            
+            CancelAndClear();
             _data?.Dispose();
             _mesher?.Dispose();
-        }
-        
-        private void OnDrawGizmosSelected()
-        {
-            if (_data == null) return;
-            
-            const int gridSize = NaiveSurfaceNets.Chunk.ChunkSize;
-            
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireCube(transform.position + new Vector3(gridSize / 2f - 0.5f, gridSize / 2f - 0.5f, gridSize / 2f - 0.5f),
-                new Vector3(gridSize, gridSize, gridSize));
         }
     }
 }

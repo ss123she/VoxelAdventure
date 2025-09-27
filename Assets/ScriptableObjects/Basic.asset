@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Terrain.TerrainSettings
   terrainHeight: 16
   groundLevel: 16
-  noiseScale: 0.02
+  noiseScale: 0.01
   lacunarity: 2
   octaves: 4
   persistence: 0.2
   caveDensity: 0
-  generationMode: 0
+  generationMode: 1
