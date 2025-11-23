@@ -1,4 +1,5 @@
 using NaiveSurfaceNets;
+using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -37,7 +38,7 @@ namespace Terrain
         {
             if (_currentState != ChunkState.Idle) return;
             
-            var gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
+            const int gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
             var offset = new float3(chunkCoordinate.x * gridSize, chunkCoordinate.y * gridSize, chunkCoordinate.z * gridSize);
 
             var noiseJob = new NoiseJob
@@ -68,6 +69,13 @@ namespace Terrain
             if (_currentState != ChunkState.GeneratingData) return;
 
             _dataGenerationHandle.Complete();
+
+            if (IsUniform(_data.data))
+            {
+                _currentState = ChunkState.Ready;
+                return;
+            }
+            
             _meshGenerationHandle = _mesher.StartMeshJob(_data, Mesher.NormalCalculationMode.FromSDF);
             _currentState = ChunkState.GeneratingMesh;
         }
@@ -80,37 +88,44 @@ namespace Terrain
         public void ApplyMesh()
         {
             if (_currentState != ChunkState.GeneratingMesh) return;
-            
+    
             _meshGenerationHandle.Complete();
-            
-            if (_mesher.Vertices.Length == 0)
+    
+            if (_mesher.Vertices.Length == 0) 
             {
                 if (_meshFilter.mesh) _meshFilter.mesh.Clear();
             }
             else
             {
-                if (!_meshFilter.mesh)
+                var mesh = _meshFilter.sharedMesh;
+                if (!mesh) 
                 {
-                    _meshFilter.mesh = new Mesh();
+                    mesh = new Mesh
+                    {
+                        name = $"ChunkMesh_{chunkCoordinate}"
+                    };
+                    _meshFilter.sharedMesh = mesh;
                 }
-                _meshFilter.mesh.SetMesh(_mesher);
+        
+                mesh.SetMesh(_mesher);
+        
+                mesh.RecalculateBounds(); 
+                mesh.RecalculateNormals(); 
             }
-            
+    
             _currentState = ChunkState.Ready;
         }
         
         public void CancelAndClear()
         {
-            if (_currentState == ChunkState.GeneratingData || _currentState == ChunkState.GeneratingMesh)
+            if (_currentState is ChunkState.GeneratingData or ChunkState.GeneratingMesh)
             {
                 _dataGenerationHandle.Complete();
                 _meshGenerationHandle.Complete();
             }
             
             if (_meshFilter.mesh)
-            {
                 _meshFilter.mesh.Clear();
-            }
             
             _currentState = ChunkState.Idle;
         }
@@ -120,6 +135,21 @@ namespace Terrain
             CancelAndClear();
             _data?.Dispose();
             _mesher?.Dispose();
+        }
+        
+        private static bool IsUniform(NativeArray<sbyte> data)
+        {
+            if (data.Length == 0) return true;
+    
+            var firstSign = data[0] > 0;
+    
+            for (var i = 1; i < data.Length; i++)
+            {
+                var currentSign = data[i] > 0;
+                if (currentSign != firstSign) return false;
+            }
+    
+            return true;
         }
     }
 }
