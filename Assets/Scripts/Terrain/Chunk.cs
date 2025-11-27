@@ -9,6 +9,10 @@ namespace Terrain
     [RequireComponent(typeof(MeshFilter))]
     public class Chunk : MonoBehaviour
     {
+        public const int ChunkSize = 32;
+        public const int ChunkSizeMinusOne = ChunkSize - 1;
+        public const int ChunkSizeMinusTwo = ChunkSize - 2;
+
         private enum ChunkState
         {
             Idle,
@@ -16,8 +20,8 @@ namespace Terrain
             GeneratingMesh,
             Ready
         }
-        
-        public Vector3Int chunkCoordinate;
+
+        public Vector3Int ChunkCoordinate { get; set; }
 
         private NaiveSurfaceNets.Chunk _data;
         private NaiveSurfaceNets.Mesher _mesher;
@@ -38,27 +42,64 @@ namespace Terrain
         {
             if (_currentState != ChunkState.Idle) return;
             
-            const int gridSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
-            var offset = new float3(chunkCoordinate.x * gridSize, chunkCoordinate.y * gridSize, chunkCoordinate.z * gridSize);
-
-            var noiseJob = new NoiseJob
+            const int size = NaiveSurfaceNets.Chunk.ChunkSize; 
+            
+            const int jobLength = size * size; 
+        
+            var offset = new float3(ChunkCoordinate.x * ChunkSizeMinusTwo, ChunkCoordinate.y * ChunkSizeMinusTwo, ChunkCoordinate.z * ChunkSizeMinusTwo);
+        
+            var jobData = new NoiseJobData
             {
-                DataNative = _data.data,
                 CaveDensity = settings.caveDensity,
-                Offset = offset,
                 NoiseScale = settings.noiseScale,
                 TerrainHeight = settings.terrainHeight,
                 GroundLevel = settings.groundLevel,
                 Lacunarity = settings.lacunarity,
                 Octaves = settings.octaves,
-                Persistence = settings.persistence,
-                GenerationMode = settings.generationMode
+                Persistence = settings.persistence
             };
-
-            _dataGenerationHandle = noiseJob.Schedule(_data.data.Length, 64);
-            _currentState = ChunkState.GeneratingData;
-        }
         
+            switch (settings.generationMode)
+            {
+                case GenerationMode.Landscape:
+                    var jobL = new NoiseJob<LandscapeStrategy>
+                    {
+                        DataNative = _data.data,
+                        Offset = offset,
+                        Settings = jobData,
+                        ChunkSize = size,
+                        Strategy = new LandscapeStrategy()
+                    };
+                    _dataGenerationHandle = jobL.Schedule(jobLength, 16);
+                    break;
+        
+                case GenerationMode.Caves:
+                    var jobC = new NoiseJob<CavesStrategy>
+                    {
+                        DataNative = _data.data,
+                        Offset = offset,
+                        Settings = jobData,
+                        ChunkSize = size,
+                        Strategy = new CavesStrategy()
+                    };
+                    _dataGenerationHandle = jobC.Schedule(jobLength, 16);
+                    break;
+        
+                case GenerationMode.Gyroid:
+                    var jobG = new NoiseJob<GyroidStrategy>
+                    {
+                        DataNative = _data.data,
+                        Offset = offset,
+                        Settings = jobData,
+                        ChunkSize = size,
+                        Strategy = new GyroidStrategy()
+                    };
+                    _dataGenerationHandle = jobG.Schedule(jobLength, 16);
+                    break;
+            }
+            
+            _currentState = ChunkState.GeneratingData;
+        }        
         public bool IsDataGenerationCompleted()
         {
             return _currentState == ChunkState.GeneratingData && _dataGenerationHandle.IsCompleted;
@@ -102,7 +143,7 @@ namespace Terrain
                 {
                     mesh = new Mesh
                     {
-                        name = $"ChunkMesh_{chunkCoordinate}"
+                        name = $"ChunkMesh_{ChunkCoordinate}"
                     };
                     _meshFilter.sharedMesh = mesh;
                 }

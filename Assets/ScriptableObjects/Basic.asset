@@ -16,7 +16,7 @@ MonoBehaviour:
   groundLevel: 16
   noiseScale: 0.01
   lacunarity: 2
-  octaves: 4
+  octaves: 7
   persistence: 0.2
   caveDensity: 0
   generationMode: 1
