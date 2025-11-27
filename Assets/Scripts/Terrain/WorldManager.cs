@@ -161,13 +161,8 @@ namespace Terrain
                 loadedCount++;
             }
 
-            // Удаляем из списка загруженных
             if (loadedCount > 0)
-            {
                 _chunksToLoadList.RemoveRange(0, Mathf.Min(loadedCount, _chunksToLoadList.Count));
-                // Синхронизируем Set (опционально, если Set используется где-то еще, но сейчас он нужен только для быстрой проверки Contains если понадобится)
-                // В данной реализации Set можно даже убрать, если не нужен быстрый LookUp.
-            }
         }
 
         private void ProcessGenerationLifecycle()
