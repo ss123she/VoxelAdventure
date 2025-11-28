@@ -23,8 +23,7 @@ namespace Terrain
         private const int ChunkSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
 
         private readonly Dictionary<Vector3Int, Chunk> _activeChunks = new();
-        
-        private readonly HashSet<Vector3Int> _chunksToLoadSet = new(); 
+
         private readonly List<Vector3Int> _chunksToLoadList = new(); 
         
         private readonly List<Vector3Int> _chunksToUnload = new();
@@ -84,7 +83,6 @@ namespace Terrain
 
         private void RefreshChunkLists()
         {
-            _chunksToLoadSet.Clear();
             _chunksToLoadList.Clear();
             _chunksToUnload.Clear();
             
@@ -95,7 +93,6 @@ namespace Terrain
                 var coord = _lastPlayerChunkCoord + new Vector3Int(x, y, z);
 
                 if (_activeChunks.ContainsKey(coord)) continue;
-                _chunksToLoadSet.Add(coord);
                 _chunksToLoadList.Add(coord);
             }
 

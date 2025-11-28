@@ -1,4 +1,6 @@
 using NaiveSurfaceNets;
+using Terrain.Noise;
+using Terrain.Noise.Strategies;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -50,6 +52,7 @@ namespace Terrain
         
             var jobData = new NoiseJobData
             {
+                Seed = new float3(1,1,1),
                 CaveDensity = settings.caveDensity,
                 NoiseScale = settings.noiseScale,
                 TerrainHeight = settings.terrainHeight,
