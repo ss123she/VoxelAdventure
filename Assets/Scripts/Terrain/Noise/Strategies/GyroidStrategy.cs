@@ -10,16 +10,20 @@ namespace Terrain.Noise.Strategies
         public void Execute(int baseIdx, float3 startPos, int chunkSize, ref NoiseJobData s, NativeArray<sbyte> data)
         {
             float scale = s.NoiseScale * 0.5f;
+            long seed = (long)math.hash(s.Seed);
             
             for (int z = 0; z < chunkSize; z++)
             {
-                float3 pos = new(startPos.x, startPos.y, startPos.z + z);
-                var p = (pos + s.Seed) * scale;
+                float3 pos = new float3(startPos.x, startPos.y, startPos.z + z);
+                float3 p = pos * scale;
                 
                 float3 warpVec;
-                warpVec.x = NoiseUtils.GetGradientNoise(p * 0.4f);
-                warpVec.y = NoiseUtils.GetGradientNoise((p + 100) * 0.4f);
-                warpVec.z = NoiseUtils.GetGradientNoise((p + 200) * 0.4f);
+                float3 warpInput = p * 0.4f;
+                
+                warpVec.x = OpenSimplex2S.Noise3_ImproveXZ(seed, warpInput);
+                warpVec.y = OpenSimplex2S.Noise3_ImproveXZ(seed + 100, warpInput);
+                warpVec.z = OpenSimplex2S.Noise3_ImproveXZ(seed + 200, warpInput);
+                
                 p += warpVec * 2.5f; 
 
                 var val = math.sin(p.x) * math.cos(p.y) +

@@ -36,23 +36,23 @@ namespace Terrain
         private void Awake()
         {
             _meshFilter = GetComponent<MeshFilter>();
-            _data ??= new NaiveSurfaceNets.Chunk();
-            _mesher ??= new NaiveSurfaceNets.Mesher();
         }
 
         public void StartGeneration(TerrainSettings settings)
         {
             if (_currentState != ChunkState.Idle) return;
+
+            _data = new NaiveSurfaceNets.Chunk();
+            _mesher = new NaiveSurfaceNets.Mesher();
             
             const int size = NaiveSurfaceNets.Chunk.ChunkSize; 
-            
             const int jobLength = size * size; 
         
             var offset = new float3(ChunkCoordinate.x * ChunkSizeMinusTwo, ChunkCoordinate.y * ChunkSizeMinusTwo, ChunkCoordinate.z * ChunkSizeMinusTwo);
         
             var jobData = new NoiseJobData
             {
-                Seed = new float3(1,1,1),
+                Seed = new(1, 1, 1),
                 CaveDensity = settings.caveDensity,
                 NoiseScale = settings.noiseScale,
                 TerrainHeight = settings.terrainHeight,
@@ -103,6 +103,7 @@ namespace Terrain
             
             _currentState = ChunkState.GeneratingData;
         }        
+
         public bool IsDataGenerationCompleted()
         {
             return _currentState == ChunkState.GeneratingData && _dataGenerationHandle.IsCompleted;
@@ -113,10 +114,12 @@ namespace Terrain
             if (_currentState != ChunkState.GeneratingData) return;
 
             _dataGenerationHandle.Complete();
-
+            
             if (IsUniform(_data.data))
             {
                 _currentState = ChunkState.Ready;
+                _data.Dispose();
+                _data = null;
                 return;
             }
             
@@ -135,6 +138,8 @@ namespace Terrain
     
             _meshGenerationHandle.Complete();
     
+            if (_meshFilter == null) _meshFilter = GetComponent<MeshFilter>();
+
             if (_mesher.Vertices.Length == 0) 
             {
                 if (_meshFilter.mesh) _meshFilter.mesh.Clear();
@@ -150,25 +155,42 @@ namespace Terrain
                     };
                     _meshFilter.sharedMesh = mesh;
                 }
+                else 
+                {
+                    mesh.Clear();
+                }
         
                 mesh.SetMesh(_mesher);
-        
-                mesh.RecalculateBounds(); 
-                mesh.RecalculateNormals(); 
+                mesh.RecalculateBounds();
+                mesh.RecalculateNormals();
             }
+            
+            _data?.Dispose();
+            _data = null;
+            _mesher?.Dispose();
+            _mesher = null;
     
             _currentState = ChunkState.Ready;
         }
         
         public void CancelAndClear()
         {
-            if (_currentState is ChunkState.GeneratingData or ChunkState.GeneratingMesh)
+            if (_data != null)
             {
-                _dataGenerationHandle.Complete();
-                _meshGenerationHandle.Complete();
+                _data.Dispose(_dataGenerationHandle);
+                _data = null;
             }
-            
-            if (_meshFilter.mesh)
+
+            if (_mesher != null)
+            {
+                _mesher.Dispose(_meshGenerationHandle);
+                _mesher = null;
+            }
+
+            _dataGenerationHandle = default;
+            _meshGenerationHandle = default;
+
+            if (_meshFilter != null && _meshFilter.mesh != null) 
                 _meshFilter.mesh.Clear();
             
             _currentState = ChunkState.Idle;
@@ -176,23 +198,22 @@ namespace Terrain
 
         private void OnDestroy()
         {
-            CancelAndClear();
+            _dataGenerationHandle.Complete();
+            _meshGenerationHandle.Complete();
             _data?.Dispose();
             _mesher?.Dispose();
         }
         
         private static bool IsUniform(NativeArray<sbyte> data)
         {
-            if (data.Length == 0) return true;
+            if (!data.IsCreated || data.Length == 0) return true;
     
             var firstSign = data[0] > 0;
-    
             for (var i = 1; i < data.Length; i++)
             {
                 var currentSign = data[i] > 0;
                 if (currentSign != firstSign) return false;
             }
-    
             return true;
         }
     }

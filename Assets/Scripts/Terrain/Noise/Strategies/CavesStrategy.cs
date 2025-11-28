@@ -11,13 +11,24 @@ namespace Terrain.Noise.Strategies
         {
             if (startPos.y < -500) {}
 
+            long seed = (long)math.hash(s.Seed);
+
             for (int z = 0; z < chunkSize; z++)
             {
                 float3 pos = new(startPos.x, startPos.y, startPos.z + z);
-                float3 seedPos = pos + s.Seed;
 
-                float2 pos2D = new(seedPos.x, seedPos.z);
-                float hNoise = NoiseUtils.GetFractalNoise2D(pos2D, s.NoiseScale, 3, s.Lacunarity, s.Persistence);
+                float hNoise = 0.0f;
+                float amp = 1.0f;
+                float freq = s.NoiseScale;
+                float3 pos2D = new float3(pos.x, 0, pos.z);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    hNoise += OpenSimplex2S.Noise3_ImproveXZ(seed + i * 133, pos2D * freq) * amp;
+                    freq *= s.Lacunarity;
+                    amp *= s.Persistence;
+                }
+
                 float surfaceSdf = pos.y - s.GroundLevel - hNoise * s.TerrainHeight;
 
                 if (surfaceSdf > 10.0f)
@@ -26,12 +37,23 @@ namespace Terrain.Noise.Strategies
                     continue;
                 }
 
-                float warp = NoiseUtils.GetGradientNoise(seedPos * 0.02f) * 4.0f;
-                float3 cavePos = seedPos + warp;
+                float warp = OpenSimplex2S.Noise3_ImproveXZ(seed, pos * 0.02f) * 4.0f;
+                float3 cavePos = pos;
+                cavePos.x += warp;
+                cavePos.z += warp;
                 
-                float caveNoise = NoiseUtils.GetFractalNoise(cavePos, s.NoiseScale * 2.0f, 2, 2.0f, 0.5f);
-                float caveSdf = caveNoise - s.CaveDensity;
+                float caveNoise = 0.0f;
+                amp = 1.0f;
+                freq = s.NoiseScale * 2.0f;
 
+                for (int i = 0; i < 2; i++)
+                {
+                    caveNoise += OpenSimplex2S.Noise3_ImproveXZ(seed + 500 + i * 133, cavePos * freq) * amp;
+                    freq *= 2.0f;
+                    amp *= 0.5f;
+                }
+
+                float caveSdf = caveNoise - s.CaveDensity;
                 float finalSdf = math.max(surfaceSdf, -caveSdf);
                 
                 if (finalSdf < -1.0f) finalSdf = -1.0f;

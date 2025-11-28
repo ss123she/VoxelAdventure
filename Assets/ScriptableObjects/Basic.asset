@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32ffa83e865a45309281c220d16825aa, type: 3}
   m_Name: Basic
   m_EditorClassIdentifier: Assembly-CSharp::Terrain.TerrainSettings
-  terrainHeight: 64
+  terrainHeight: 32
   groundLevel: 8
-  noiseScale: 0.01
-  lacunarity: 2
-  octaves: 2
+  noiseScale: 0.002
+  lacunarity: 1
+  octaves: 4
   persistence: 0.09
-  caveDensity: 0.1
+  caveDensity: 0
   generationMode: 1
