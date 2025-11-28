@@ -1,5 +1,6 @@
 ﻿using System;
 using Unity.Collections;
+using Unity.Jobs;
 
 namespace NaiveSurfaceNets
 {
@@ -24,5 +25,10 @@ namespace NaiveSurfaceNets
 		{
 			data.Dispose();
 		}
+
+		public void Dispose(JobHandle dependency)
+    	{
+        	data.Dispose(dependency);
+    	}
 	}
 }

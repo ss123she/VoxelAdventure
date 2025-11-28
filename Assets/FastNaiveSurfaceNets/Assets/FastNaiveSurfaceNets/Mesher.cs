@@ -40,6 +40,16 @@ namespace NaiveSurfaceNets
 			mesherJob.bounds.Dispose();
 			mesherJob.buffer.Dispose();
 		}
+
+		public void Dispose(JobHandle dependency)
+    	{
+			mesherJob.edgeTable.Dispose(dependency);
+			mesherJob.indices.Dispose(dependency);
+			mesherJob.vertices.Dispose(dependency);
+			mesherJob.buffer.Dispose(dependency);
+			mesherJob.bounds.Dispose();
+    	}
+
 		private void Allocate()
 		{
 			var bufferSize = (Chunk.ChunkSize + 1) * (Chunk.ChunkSize + 1) * 2;

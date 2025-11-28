@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Profiling;
 
@@ -18,44 +17,87 @@ namespace Terrain
 
         [Header("Performance Settings")]
         [SerializeField] private int maxChunkCreationsPerFrame = 8;
-        [SerializeField] private int maxMeshAppliesPerFrame = 8;
-
+        [SerializeField] private int maxChunkUnloadsPerFrame = 8; 
+        
         private const int ChunkSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
 
         private readonly Dictionary<Vector3Int, Chunk> _activeChunks = new();
-
-        private readonly List<Vector3Int> _chunksToLoadList = new(); 
         
+        private readonly List<Vector3Int> _chunksToLoadList = new(); 
         private readonly List<Vector3Int> _chunksToUnload = new();
         
         private readonly List<Chunk> _chunksGeneratingData = new();
         private readonly List<Chunk> _chunksGeneratingMesh = new();
+        
         private readonly Queue<Chunk> _chunksReadyToApplyMesh = new();
         private readonly Queue<Chunk> _chunkPool = new();
+
+        private Vector3Int[] _sortedChunkOffsets;
         
         private Vector3Int _lastPlayerChunkCoord;
-        private bool _forceUpdate = true; 
+        private bool _forceUpdate = true;
+        
+        // Кэшированные значения для избежания пересчета в цикле
+        private int _sqrViewDistHorizontal;
 
         private void Start()
         {
-            var poolVolume = (viewDistanceHorizontal * 2 + 1) * (viewDistanceHorizontal * 2 + 1) * (viewDistanceVertical * 2 + 1);
-            for (var i = 0; i < poolVolume; i++)
+            if (!chunkPrefab)
+            {
+                Debug.LogError("WorldManager: Chunk Prefab is not assigned!");
+                enabled = false;
+                return;
+            }
+
+            GenerateSortedOffsets();
+
+            int maxChunks = _sortedChunkOffsets.Length + 100;
+            _chunksToLoadList.Capacity = maxChunks;
+            _chunksToUnload.Capacity = maxChunks;
+            _chunksGeneratingData.Capacity = maxChunks;
+            _chunksGeneratingMesh.Capacity = maxChunks;
+
+            int poolSize = maxChunks; 
+            for (var i = 0; i < poolSize; i++)
             {
                 var chunk = CreateChunkInstance();
-                chunk.gameObject.SetActive(false);
-                _chunkPool.Enqueue(chunk);
+                if (chunk != null) 
+                {
+                    chunk.gameObject.SetActive(false);
+                    _chunkPool.Enqueue(chunk);
+                }
             }
+        }
+
+        private void GenerateSortedOffsets()
+        {
+            var offsets = new List<Vector3Int>();
+            
+            for (var x = -viewDistanceHorizontal; x <= viewDistanceHorizontal; x++)
+            for (var y = -viewDistanceVertical; y <= viewDistanceVertical; y++)
+            for (var z = -viewDistanceHorizontal; z <= viewDistanceHorizontal; z++)
+                offsets.Add(new Vector3Int(x, y, z));
+            
+            offsets.Sort((a, b) => a.sqrMagnitude.CompareTo(b.sqrMagnitude));
+            
+            _sortedChunkOffsets = offsets.ToArray();
         }
         
         private Chunk CreateChunkInstance()
         {
             var go = Instantiate(chunkPrefab, transform);
-            var chunk = go.GetComponent<Chunk>();
+            if (!go.TryGetComponent<Chunk>(out var chunk))
+            {
+                Destroy(go);
+                return null;
+            }
             return chunk;
         }
 
         private void Update()
         {
+            if (player == null) return;
+
             var playerChunkCoord = GetChunkCoordinate(player.position);
             
             if (_forceUpdate || playerChunkCoord != _lastPlayerChunkCoord)
@@ -85,117 +127,164 @@ namespace Terrain
         {
             _chunksToLoadList.Clear();
             _chunksToUnload.Clear();
-            
-            for (var x = -viewDistanceHorizontal; x <= viewDistanceHorizontal; x++)
-            for (var y = -viewDistanceVertical; y <= viewDistanceVertical; y++)
-            for (var z = -viewDistanceHorizontal; z <= viewDistanceHorizontal; z++)
-            {
-                var coord = _lastPlayerChunkCoord + new Vector3Int(x, y, z);
 
-                if (_activeChunks.ContainsKey(coord)) continue;
-                _chunksToLoadList.Add(coord);
+            for (int i = 0; i < _sortedChunkOffsets.Length; i++)
+            {
+                var coord = _lastPlayerChunkCoord + _sortedChunkOffsets[i];
+                if (!_activeChunks.ContainsKey(coord))
+                {
+                    _chunksToLoadList.Add(coord);
+                }
             }
+            
+            _chunksToLoadList.Reverse();
 
-            _chunksToLoadList.Sort((a, b) => 
+            int minX = _lastPlayerChunkCoord.x - viewDistanceHorizontal;
+            int maxX = _lastPlayerChunkCoord.x + viewDistanceHorizontal;
+            int minZ = _lastPlayerChunkCoord.z - viewDistanceHorizontal;
+            int maxZ = _lastPlayerChunkCoord.z + viewDistanceHorizontal;
+            int minY = _lastPlayerChunkCoord.y - viewDistanceVertical;
+            int maxY = _lastPlayerChunkCoord.y + viewDistanceVertical;
+
+            foreach (var kvp in _activeChunks)
             {
-                var distA = (a - _lastPlayerChunkCoord).sqrMagnitude;
-                var distB = (b - _lastPlayerChunkCoord).sqrMagnitude;
-                return distA.CompareTo(distB);
-            });
+                var coord = kvp.Key;
+                
+                bool outOfBounds = coord.x < minX || coord.x > maxX ||
+                                   coord.z < minZ || coord.z > maxZ ||
+                                   coord.y < minY || coord.y > maxY;
 
-            foreach (var coord in from coord in _activeChunks.Keys let outOfBoundsX = Mathf.Abs(coord.x - _lastPlayerChunkCoord.x) > viewDistanceHorizontal let outOfBoundsZ = Mathf.Abs(coord.z - _lastPlayerChunkCoord.z) > viewDistanceHorizontal let outOfBoundsY = Mathf.Abs(coord.y - _lastPlayerChunkCoord.y) > viewDistanceVertical where outOfBoundsX || outOfBoundsZ || outOfBoundsY select coord)
-                _chunksToUnload.Add(coord);
+                if (outOfBounds)
+                {
+                    _chunksToUnload.Add(coord);
+                }
+            }
         }
         
         private void ProcessUnloading()
         {
-            if (_chunksToUnload.Count == 0) return;
+            int count = _chunksToUnload.Count;
+            if (count == 0) return;
 
-            foreach (var coord in _chunksToUnload)
+            int unloadedCount = 0;
+            for (int i = count - 1; i >= 0; i--)
             {
-                if (!_activeChunks.TryGetValue(coord, out var chunk)) continue;
+                if (unloadedCount >= maxChunkUnloadsPerFrame) break;
+
+                var coord = _chunksToUnload[i];
+                _chunksToUnload.RemoveAt(i);
                 
+                if (!_activeChunks.TryGetValue(coord, out var chunk)) continue;
+                if (chunk == null) continue;
+
                 _chunksGeneratingData.Remove(chunk);
                 _chunksGeneratingMesh.Remove(chunk);
                 
                 chunk.CancelAndClear();
-                
                 chunk.gameObject.SetActive(false);
-                chunk.name = "Chunk (Pooled)";
                 
                 _chunkPool.Enqueue(chunk);
                 _activeChunks.Remove(coord);
+                
+                unloadedCount++;
             }
-            _chunksToUnload.Clear();
         }
 
         private void ProcessLoading()
         {
-            if (_chunksToLoadList.Count == 0) return;
+            int countToLoad = Mathf.Min(_chunksToLoadList.Count, maxChunkCreationsPerFrame);
+            if (countToLoad == 0) return;
 
-            var loadedCount = 0;
-
-            foreach (var i in _chunksToLoadList)
+            for (int i = 0; i < countToLoad; i++)
             {
-                if (loadedCount >= maxChunkCreationsPerFrame) break;
+                int lastIndex = _chunksToLoadList.Count - 1;
+                var coord = _chunksToLoadList[lastIndex];
+                _chunksToLoadList.RemoveAt(lastIndex);
 
-                if (_activeChunks.ContainsKey(i)) continue;
+                if (_activeChunks.ContainsKey(coord)) continue;
 
-                var position = (Vector3)i * ChunkSize;
-
-                var chunk = _chunkPool.Count > 0 ? _chunkPool.Dequeue() : CreateChunkInstance();
+                Chunk chunk;
+                if (_chunkPool.Count > 0)
+                {
+                    chunk = _chunkPool.Dequeue();
+                }
+                else
+                {
+                    chunk = CreateChunkInstance();
+                    if (chunk == null) continue;
+                }
                 
-                
+                var position = (Vector3)coord * ChunkSize;
                 chunk.transform.position = position;
-                chunk.name = $"Chunk {i}";
+                
+#if UNITY_EDITOR
+                chunk.name = $"Chunk {coord}";
+#endif
                 chunk.gameObject.SetActive(true);
-                chunk.ChunkCoordinate = i;
+                chunk.ChunkCoordinate = coord;
                 chunk.StartGeneration(terrainSettings);
 
-                _activeChunks.Add(i, chunk);
+                _activeChunks.Add(coord, chunk);
                 _chunksGeneratingData.Add(chunk);
-                
-                loadedCount++;
             }
-
-            if (loadedCount > 0)
-                _chunksToLoadList.RemoveRange(0, Mathf.Min(loadedCount, _chunksToLoadList.Count));
         }
 
         private void ProcessGenerationLifecycle()
         {
-            _chunksGeneratingData.RemoveAll(chunk => 
+            for (int i = _chunksGeneratingData.Count - 1; i >= 0; i--)
             {
-                if (!chunk.gameObject.activeSelf) return true; 
-
-                if (!chunk.IsDataGenerationCompleted()) return false;
+                var chunk = _chunksGeneratingData[i];
                 
-                chunk.StartMeshGeneration();
-                _chunksGeneratingMesh.Add(chunk);
-                return true;
-            });
+                if (chunk == null || !chunk.gameObject.activeSelf) 
+                {
+                    SwapRemove(_chunksGeneratingData, i);
+                    continue;
+                }
+                
+                if (chunk.IsDataGenerationCompleted())
+                {
+                    chunk.StartMeshGeneration();
+                    _chunksGeneratingMesh.Add(chunk);
+                    SwapRemove(_chunksGeneratingData, i);
+                }
+            }
 
-            _chunksGeneratingMesh.RemoveAll(chunk => 
+            for (int i = _chunksGeneratingMesh.Count - 1; i >= 0; i--)
             {
-                if (!chunk.gameObject.activeSelf) return true;
+                var chunk = _chunksGeneratingMesh[i];
 
-                if (!chunk.IsMeshGenerationCompleted()) return false;
-                _chunksReadyToApplyMesh.Enqueue(chunk);
-                return true;
-            });
+                if (chunk == null || !chunk.gameObject.activeSelf)
+                {
+                    SwapRemove(_chunksGeneratingMesh, i);
+                    continue;
+                }
 
-            var appliedCount = 0;
-            while (_chunksReadyToApplyMesh.Count > 0 && appliedCount < maxMeshAppliesPerFrame)
+                if (chunk.IsMeshGenerationCompleted())
+                {
+                    _chunksReadyToApplyMesh.Enqueue(chunk);
+                    SwapRemove(_chunksGeneratingMesh, i);
+                }
+            }
+
+            while (_chunksReadyToApplyMesh.Count > 0)
             {
                 var chunk = _chunksReadyToApplyMesh.Dequeue();
-                
-                if (!chunk.gameObject.activeSelf) continue;
+                if (chunk == null || !chunk.gameObject.activeSelf) continue;
 
                 Profiler.BeginSample("ApplyMesh");
                 chunk.ApplyMesh();
                 Profiler.EndSample();
-                appliedCount++;
             }
+        }
+
+        private void SwapRemove<T>(List<T> list, int index)
+        {
+            int lastIndex = list.Count - 1;
+            if (index != lastIndex)
+            {
+                list[index] = list[lastIndex];
+            }
+            list.RemoveAt(lastIndex);
         }
 
         private static Vector3Int GetChunkCoordinate(Vector3 position) => Vector3Int.FloorToInt(position / ChunkSize);

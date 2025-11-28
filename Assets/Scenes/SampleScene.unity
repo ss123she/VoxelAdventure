@@ -479,10 +479,10 @@ MonoBehaviour:
   player: {fileID: 1188564804}
   chunkPrefab: {fileID: 4797768151595128445, guid: afb66ddcf0580c206809f2abda8cc309, type: 3}
   terrainSettings: {fileID: 11400000, guid: 3eb065ca393774be8bd89448ffa9dbed, type: 2}
-  viewDistanceHorizontal: 30
+  viewDistanceHorizontal: 10
   viewDistanceVertical: 4
   maxChunkCreationsPerFrame: 16
-  maxMeshAppliesPerFrame: 16
+  maxChunkUnloadsPerFrame: 64
 --- !u!1 &1188564803
 GameObject:
   m_ObjectHideFlags: 0
@@ -528,7 +528,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eaf981c85e3ce83e886cc84267339eff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMover
-  speed: 100
+  speed: 10
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
