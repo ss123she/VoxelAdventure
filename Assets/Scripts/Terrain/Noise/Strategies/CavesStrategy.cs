@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -40,5 +41,12 @@ namespace Terrain.Noise.Strategies
                 data[baseIdx + z] = (sbyte)(finalSdf * -127.0f);
             }
         }
+=======
+namespace Terrain.Noise.Strategies
+{
+    public class CavesStrategy
+    {
+        
+>>>>>>> fd4fb025f38ce06c097181230c65bf81b8998614
     }
 }

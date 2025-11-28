@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using System.Runtime.CompilerServices;
 using Unity.Mathematics;
 
@@ -111,5 +112,12 @@ namespace Terrain.Noise
             }
             return sum;
         }
+=======
+namespace Terrain.Noise
+{
+    public class NoiseUtils
+    {
+        
+>>>>>>> fd4fb025f38ce06c097181230c65bf81b8998614
     }
 }
