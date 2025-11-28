@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -14,7 +13,7 @@ namespace Terrain.Noise.Strategies
             
             for (int z = 0; z < chunkSize; z++)
             {
-                float3 pos = new float3(startPos.x, startPos.y, startPos.z + z);
+                float3 pos = new(startPos.x, startPos.y, startPos.z + z);
                 var p = (pos + s.Seed) * scale;
                 
                 float3 warpVec;
@@ -38,12 +37,5 @@ namespace Terrain.Noise.Strategies
                 data[baseIdx + z] = (sbyte)(finalSdf * -127.0f);
             }
         }
-=======
-namespace Terrain.Noise.Strategies
-{
-    public class GyroidStrategy
-    {
-        
->>>>>>> fd4fb025f38ce06c097181230c65bf81b8998614
     }
 }

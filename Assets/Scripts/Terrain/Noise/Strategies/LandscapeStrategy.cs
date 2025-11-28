@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -9,44 +8,43 @@ namespace Terrain.Noise.Strategies
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute(int baseIdx, float3 startPos, int chunkSize, ref NoiseJobData s, NativeArray<sbyte> data)
-        {
-            var limitTop = s.GroundLevel + s.TerrainHeight + 15.0f; 
-            var limitBot = s.GroundLevel - s.TerrainHeight - 15.0f;
+        {            
+            float limitTop = s.GroundLevel + s.TerrainHeight + 15.0f; 
+            float limitBot = s.GroundLevel - s.TerrainHeight - 15.0f;
 
             if (startPos.y > limitTop)
             {
-                for (var z = 0; z < chunkSize; z++) data[baseIdx + z] = -127; 
+                for (int z = 0; z < chunkSize; z++) data[baseIdx + z] = -127; 
                 return;
             }
-            
             if (startPos.y < limitBot)
             {
-                for (var z = 0; z < chunkSize; z++) data[baseIdx + z] = 127;
+                for (int z = 0; z < chunkSize; z++) data[baseIdx + z] = 127;
                 return;
             }
 
-            for (var z = 0; z < chunkSize; z++)
+            for (int z = 0; z < chunkSize; z++)
             {
-                var currentPos = new float3(startPos.x, startPos.y, startPos.z + z);
+                float3 currentPos = new(startPos.x, startPos.y, startPos.z + z);
                 
-                var pos2D = new float2(currentPos.x + s.Seed.x, currentPos.z + s.Seed.z);
+                float2 pos2D = new(currentPos.x + s.Seed.x, currentPos.z + s.Seed.z);
                 
-                var warp2D = NoiseUtils.GetGradientNoise2D(pos2D * s.NoiseScale * 0.5f);
-                var warpedPos2D = pos2D + warp2D * 5.0f;
+                float warp2D = NoiseUtils.GetGradientNoise2D(pos2D * s.NoiseScale * 0.5f);
+                float2 warpedPos2D = pos2D + warp2D * 5.0f;
 
-                var noiseHeight = NoiseUtils.GetFractalNoise2D(warpedPos2D, s.NoiseScale, 3, s.Lacunarity, s.Persistence); 
+                float noiseHeight = NoiseUtils.GetFractalNoise2D(warpedPos2D, s.NoiseScale, 3, s.Lacunarity, s.Persistence); 
                 
-                var surfaceHeight = s.GroundLevel + noiseHeight * s.TerrainHeight;
-                var baseSdf = currentPos.y - surfaceHeight;
+                float surfaceHeight = s.GroundLevel + noiseHeight * s.TerrainHeight;
+                float baseSdf = currentPos.y - surfaceHeight;
 
-                if (baseSdf is > -15.0f and < 15.0f)
+                if (baseSdf > -15.0f && baseSdf < 15.0f)
                 {
-                    var pos3D = currentPos + s.Seed;
+                    float3 pos3D = currentPos + s.Seed;
                     pos3D.x += warp2D * 4.0f; 
                     
-                    var noise3D = NoiseUtils.GetFractalNoise(pos3D, s.NoiseScale * 1.5f, 2, s.Lacunarity, s.Persistence);
+                    float noise3D = NoiseUtils.GetFractalNoise(pos3D, s.NoiseScale * 1.5f, 2, s.Lacunarity, s.Persistence);
                     
-                    var archSdf = 0.2f - noise3D; 
+                    float archSdf = 0.2f - noise3D; 
                     
                     baseSdf = math.min(baseSdf, archSdf);
                 }
@@ -57,12 +55,5 @@ namespace Terrain.Noise.Strategies
                 data[baseIdx + z] = (sbyte)(baseSdf * -127.0f);
             }
         }
-=======
-namespace Terrain.Noise.Strategies
-{
-    public class LandscapeStrategy
-    {
-        
->>>>>>> fd4fb025f38ce06c097181230c65bf81b8998614
     }
 }

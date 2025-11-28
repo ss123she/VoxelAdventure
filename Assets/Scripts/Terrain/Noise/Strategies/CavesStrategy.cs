@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -10,16 +9,16 @@ namespace Terrain.Noise.Strategies
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute(int baseIdx, float3 startPos, int chunkSize, ref NoiseJobData s, NativeArray<sbyte> data)
         {
-            if (startPos.y < -500) { }
+            if (startPos.y < -500) {}
 
-            for (var z = 0; z < chunkSize; z++)
+            for (int z = 0; z < chunkSize; z++)
             {
-                var pos = new float3(startPos.x, startPos.y, startPos.z + z);
-                var seedPos = pos + s.Seed;
+                float3 pos = new(startPos.x, startPos.y, startPos.z + z);
+                float3 seedPos = pos + s.Seed;
 
-                var pos2D = new float2(seedPos.x, seedPos.z);
-                var hNoise = NoiseUtils.GetFractalNoise2D(pos2D, s.NoiseScale, 3, s.Lacunarity, s.Persistence);
-                var surfaceSdf = pos.y - s.GroundLevel - hNoise * s.TerrainHeight;
+                float2 pos2D = new(seedPos.x, seedPos.z);
+                float hNoise = NoiseUtils.GetFractalNoise2D(pos2D, s.NoiseScale, 3, s.Lacunarity, s.Persistence);
+                float surfaceSdf = pos.y - s.GroundLevel - hNoise * s.TerrainHeight;
 
                 if (surfaceSdf > 10.0f)
                 {
@@ -27,13 +26,13 @@ namespace Terrain.Noise.Strategies
                     continue;
                 }
 
-                var warp = NoiseUtils.GetGradientNoise(seedPos * 0.02f) * 4.0f;
-                var cavePos = seedPos + warp;
+                float warp = NoiseUtils.GetGradientNoise(seedPos * 0.02f) * 4.0f;
+                float3 cavePos = seedPos + warp;
                 
-                var caveNoise = NoiseUtils.GetFractalNoise(cavePos, s.NoiseScale * 2.0f, 2, 2.0f, 0.5f);
-                var caveSdf = caveNoise - s.CaveDensity;
+                float caveNoise = NoiseUtils.GetFractalNoise(cavePos, s.NoiseScale * 2.0f, 2, 2.0f, 0.5f);
+                float caveSdf = caveNoise - s.CaveDensity;
 
-                var finalSdf = math.max(surfaceSdf, -caveSdf);
+                float finalSdf = math.max(surfaceSdf, -caveSdf);
                 
                 if (finalSdf < -1.0f) finalSdf = -1.0f;
                 else if (finalSdf > 1.0f) finalSdf = 1.0f;
@@ -41,12 +40,5 @@ namespace Terrain.Noise.Strategies
                 data[baseIdx + z] = (sbyte)(finalSdf * -127.0f);
             }
         }
-=======
-namespace Terrain.Noise.Strategies
-{
-    public class CavesStrategy
-    {
-        
->>>>>>> fd4fb025f38ce06c097181230c65bf81b8998614
     }
 }
