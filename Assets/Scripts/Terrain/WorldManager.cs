@@ -37,7 +37,6 @@ namespace Terrain
         private Vector3Int _lastPlayerChunkCoord;
         private bool _forceUpdate = true;
         
-        // Кэшированные значения для избежания пересчета в цикле
         private int _sqrViewDistHorizontal;
 
         private void Start()
