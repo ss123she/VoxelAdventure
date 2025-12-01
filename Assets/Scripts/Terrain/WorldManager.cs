@@ -37,7 +37,24 @@ namespace Terrain
         private Vector3Int _lastPlayerChunkCoord;
         private bool _forceUpdate = true;
         
-        private int _sqrViewDistHorizontal;
+        private void Awake()
+        {
+            if (!chunkPrefab || !terrainSettings)
+            {
+                Debug.LogError("WorldManager: Settings or Prefab missing!");
+                enabled = false;
+                return;
+            }
+
+            if (terrainSettings.RandomizeSeedOnPlay)
+            {
+                var rng = new Unity.Mathematics.Random((uint)System.DateTime.Now.Ticks);
+                terrainSettings.WorldSeed = rng.NextInt();
+                Debug.Log($"<color=green>New World Seed Generated: {terrainSettings.WorldSeed}</color>");
+            }
+            else
+                Debug.Log($"Using Fixed World Seed: {terrainSettings.WorldSeed}");
+        }
 
         private void Start()
         {

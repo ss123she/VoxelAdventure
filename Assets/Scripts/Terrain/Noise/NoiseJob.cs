@@ -9,8 +9,9 @@ namespace Terrain.Noise
 {
     public struct NoiseJobData
     {
-        public float3 Seed;
+        public int Seed;
         public float NoiseScale;
+        public float WarpStrength;
         public float TerrainHeight;
         public float GroundLevel;
         public int Octaves;

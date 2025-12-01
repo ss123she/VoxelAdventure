@@ -49,20 +49,21 @@ namespace Terrain
             const int jobLength = size * size; 
         
             var offset = new float3(ChunkCoordinate.x * ChunkSizeMinusTwo, ChunkCoordinate.y * ChunkSizeMinusTwo, ChunkCoordinate.z * ChunkSizeMinusTwo);
-        
+
             var jobData = new NoiseJobData
             {
-                Seed = new(1, 1, 1),
-                CaveDensity = settings.caveDensity,
-                NoiseScale = settings.noiseScale,
-                TerrainHeight = settings.terrainHeight,
-                GroundLevel = settings.groundLevel,
-                Lacunarity = settings.lacunarity,
-                Octaves = settings.octaves,
-                Persistence = settings.persistence
+                Seed = settings.WorldSeed,
+                CaveDensity = settings.CaveDensity,
+                NoiseScale = settings.NoiseScale,
+                WarpStrength = settings.WarpStrength,
+                TerrainHeight = settings.TerrainHeight,
+                GroundLevel = settings.GroundLevel,
+                Lacunarity = settings.Lacunarity,
+                Octaves = settings.Octaves,
+                Persistence = settings.Persistence
             };
         
-            switch (settings.generationMode)
+            switch (settings.GenerationMode)
             {
                 case GenerationMode.Landscape:
                     var jobL = new NoiseJob<LandscapeStrategy>
@@ -74,18 +75,6 @@ namespace Terrain
                         Strategy = new LandscapeStrategy()
                     };
                     _dataGenerationHandle = jobL.Schedule(jobLength, 16);
-                    break;
-        
-                case GenerationMode.Caves:
-                    var jobC = new NoiseJob<CavesStrategy>
-                    {
-                        DataNative = _data.data,
-                        Offset = offset,
-                        Settings = jobData,
-                        ChunkSize = size,
-                        Strategy = new CavesStrategy()
-                    };
-                    _dataGenerationHandle = jobC.Schedule(jobLength, 16);
                     break;
         
                 case GenerationMode.Gyroid:

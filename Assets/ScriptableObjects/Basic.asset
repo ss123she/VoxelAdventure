@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Terrain.TerrainSettings
   terrainHeight: 32
   groundLevel: 8
-  noiseScale: 0.002
+  noiseScale: 0.005
   lacunarity: 1
   octaves: 4
   persistence: 0.09
   caveDensity: 0
+  randomizeSeedOnPlay: 1
+  WorldSeed: 938567598
   generationMode: 1
