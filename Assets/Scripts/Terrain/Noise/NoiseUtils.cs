@@ -61,6 +61,38 @@ namespace Terrain.Noise
             }
         }
 
+        public static unsafe void ComputeNoiseFBM3D(
+        long seed,
+        int chunkSize,
+        float* xCoords,
+        float yCoord,
+        float* zCoords,
+        float* outNoiseBuffer,
+        NoiseJobData s)
+        {
+            UnsafeUtility.MemClear(outNoiseBuffer, chunkSize * sizeof(float));
+
+            float amp = 1.0f;
+            float freq = s.NoiseScale;
+
+            for (int i = 0; i < s.Octaves; i++)
+            {
+                long octaveSeed = seed + (i * 3241);
+
+                float sampleY = yCoord * freq; 
+
+                for (int z = 0; z < chunkSize; z++)
+                {
+                    float3 samplePos = new(xCoords[z] * freq, sampleY, zCoords[z] * freq);
+                    
+                    outNoiseBuffer[z] += OpenSimplex2S.Noise3_ImproveXZ(octaveSeed, samplePos) * amp;
+                }
+
+                freq *= s.Lacunarity;
+                amp *= s.Persistence;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeDomainWarping(
             long seed, 

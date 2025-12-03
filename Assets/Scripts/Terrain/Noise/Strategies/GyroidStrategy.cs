@@ -36,7 +36,7 @@ namespace Terrain.Noise.Strategies
                 var floorSdf = pos.y - s.GroundLevel;
                 finalSdf = math.max(finalSdf, -floorSdf);
 
-                // Упаковка
+                // Pack
                 data[baseIdx + z] = TerrainNoiseUtils.PackSDF(finalSdf);
             }
         }

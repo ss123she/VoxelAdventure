@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Terrain
 {
@@ -124,44 +125,63 @@ namespace Terrain
         public void ApplyMesh()
         {
             if (_currentState != ChunkState.GeneratingMesh) return;
-    
+
             _meshGenerationHandle.Complete();
-    
+
             if (_meshFilter == null) _meshFilter = GetComponent<MeshFilter>();
 
-            if (_mesher.Vertices.Length == 0) 
+            var vertexCount = _mesher.Vertices.Length;
+            var indexCount = _mesher.Indices.Length;
+
+            if (vertexCount == 0)
             {
-                if (_meshFilter.mesh) _meshFilter.mesh.Clear();
+                if (_meshFilter.sharedMesh) _meshFilter.sharedMesh.Clear();
             }
             else
             {
                 var mesh = _meshFilter.sharedMesh;
-                if (!mesh) 
+                if (!mesh)
                 {
-                    mesh = new Mesh
-                    {
-                        name = $"ChunkMesh_{ChunkCoordinate}"
-                    };
+                    mesh = new Mesh { name = $"ChunkMesh_{ChunkCoordinate}" };
+                    mesh.MarkDynamic();
                     _meshFilter.sharedMesh = mesh;
                 }
-                else 
-                {
+                else
                     mesh.Clear();
-                }
-        
-                mesh.SetMesh(_mesher);
+
+                var layout = new[]
+                {
+                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, stream: 0),
+                    new VertexAttributeDescriptor(VertexAttribute.Normal,   VertexAttributeFormat.Float32, 3, stream: 0)
+                };
+
+                mesh.SetVertexBufferParams(vertexCount, layout);
+                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt32);
+
+                mesh.SetVertexBufferData(_mesher.Vertices, 0, 0, vertexCount, stream: 0);
+                mesh.SetIndexBufferData(_mesher.Indices, 0, 0, indexCount);
+
+                mesh.subMeshCount = 1;
+                var subMesh = new SubMeshDescriptor(0, indexCount, MeshTopology.Triangles)
+                {
+                    firstVertex = 0,
+                    vertexCount = vertexCount,
+                    bounds = default 
+                };
+                
+                mesh.SetSubMesh(0, subMesh, MeshUpdateFlags.DontRecalculateBounds);
+
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
             }
             
-            _data?.Dispose();
+            _data?.Dispose(_meshGenerationHandle);
             _data = null;
-            _mesher?.Dispose();
+            _mesher?.Dispose(_meshGenerationHandle);
             _mesher = null;
-    
+
             _currentState = ChunkState.Ready;
-        }
-        
+        }        
         public void CancelAndClear()
         {
             if (_data != null)

@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32ffa83e865a45309281c220d16825aa, type: 3}
   m_Name: Basic
   m_EditorClassIdentifier: Assembly-CSharp::Terrain.TerrainSettings
-  terrainHeight: 32
-  groundLevel: 8
-  noiseScale: 0.005
-  lacunarity: 1
-  octaves: 4
-  persistence: 0.09
-  caveDensity: 0
-  randomizeSeedOnPlay: 1
-  WorldSeed: 938567598
-  generationMode: 1
+  TerrainHeight: 16
+  GroundLevel: 1
+  NoiseScale: 0.01
+  WarpStrength: 10
+  Lacunarity: 0
+  Octaves: 7
+  Persistence: 0.5
+  CaveDensity: 1
+  RandomizeSeedOnPlay: 1
+  WorldSeed: -248307740
+  GenerationMode: 0
