@@ -480,9 +480,8 @@ MonoBehaviour:
   chunkPrefab: {fileID: 4797768151595128445, guid: afb66ddcf0580c206809f2abda8cc309, type: 3}
   terrainSettings: {fileID: 11400000, guid: 3eb065ca393774be8bd89448ffa9dbed, type: 2}
   viewDistanceHorizontal: 10
-  viewDistanceVertical: 4
-  maxChunkCreationsPerFrame: 16
-  maxChunkUnloadsPerFrame: 64
+  viewDistanceVertical: 10
+  chunksPerFrame: 5
 --- !u!1 &1188564803
 GameObject:
   m_ObjectHideFlags: 0
