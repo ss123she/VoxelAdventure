@@ -54,7 +54,6 @@ namespace Terrain
             var jobData = new NoiseJobData
             {
                 Seed = settings.WorldSeed,
-                CaveDensity = settings.CaveDensity,
                 NoiseScale = settings.NoiseScale,
                 WarpStrength = settings.WarpStrength,
                 TerrainHeight = settings.TerrainHeight,

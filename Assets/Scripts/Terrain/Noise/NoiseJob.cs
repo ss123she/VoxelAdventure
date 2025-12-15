@@ -17,7 +17,6 @@ namespace Terrain.Noise
         public int Octaves;
         public float Lacunarity;
         public float Persistence;
-        public float CaveDensity;
     }
     
     [BurstCompile(FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Low, DisableSafetyChecks = true)] 

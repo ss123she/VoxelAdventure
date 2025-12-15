@@ -25,11 +25,7 @@ namespace Terrain
 
         [Range(0, 1)]
         public float Persistence = 0.5f;
-        
-        [Header("Cave noise settings")]
-        [Range(0f, 1f)]
-        public float CaveDensity = 1.0f;
-        
+                
         [Header("General Settings")]
         public bool RandomizeSeedOnPlay = true;
         public int WorldSeed = 1;

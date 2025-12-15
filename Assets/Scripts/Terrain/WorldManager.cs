@@ -26,7 +26,7 @@ namespace Terrain
         private void Start()
         {
             if (terrainSettings.RandomizeSeedOnPlay)
-                terrainSettings.WorldSeed = new Unity.Mathematics.Random((uint)System.DateTime.Now.Ticks).NextInt();
+                terrainSettings.WorldSeed = new Unity.Mathematics.Random((uint)DateTime.Now.Ticks).NextInt();
 
             CreateSortedOffsets();
             
@@ -44,7 +44,7 @@ namespace Terrain
             if (!player) return;
 
             var playerChunk = Vector3Int.FloorToInt(player.position / ChunkSize);
-            bool moved = playerChunk != _lastPlayerChunk;
+            var moved = playerChunk != _lastPlayerChunk;
             _lastPlayerChunk = playerChunk;
 
             if (moved) UnloadChunks(playerChunk);
@@ -110,9 +110,7 @@ namespace Terrain
                 var chunk = _processingChunks[i];
 
                 if (chunk.IsDataGenerationCompleted())
-                {
                     chunk.StartMeshGeneration();
-                }
                 else if (chunk.IsMeshGenerationCompleted())
                 {
                     chunk.ApplyMesh();
