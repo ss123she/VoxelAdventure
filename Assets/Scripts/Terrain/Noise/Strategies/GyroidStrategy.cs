@@ -9,7 +9,7 @@ namespace Terrain.Noise.Strategies
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute(int baseIdx, float3 startPos, int chunkSize, ref NoiseJobData s, NativeArray<sbyte> data)
         {
-            // Memory Layout: [ WarpedX | WarpedZ ]
+            // [X coords | Z coords]
             float* memory = stackalloc float[chunkSize * 2];
             
             float* wx = memory;

@@ -17,7 +17,7 @@ RenderSettings:
   m_Fog: 1
   m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.01
+  m_FogDensity: 0.002
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 410087040}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -328,7 +328,7 @@ Light:
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
-  m_ColorTemperature: 5000
+  m_ColorTemperature: 4500
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
@@ -479,9 +479,9 @@ MonoBehaviour:
   player: {fileID: 1188564804}
   chunkPrefab: {fileID: 4797768151595128445, guid: afb66ddcf0580c206809f2abda8cc309, type: 3}
   terrainSettings: {fileID: 11400000, guid: 3eb065ca393774be8bd89448ffa9dbed, type: 2}
-  viewDistanceHorizontal: 10
-  viewDistanceVertical: 10
-  chunksPerFrame: 5
+  viewDistanceHorizontal: 15
+  viewDistanceVertical: 2
+  chunksPerFrame: 10
 --- !u!1 &1188564803
 GameObject:
   m_ObjectHideFlags: 0

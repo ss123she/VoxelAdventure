@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,6 +6,7 @@ namespace Terrain
 {
     public class WorldManager : MonoBehaviour
     {
+        private static short ChunkPoolSize = 450;
         [SerializeField] private Transform player;
         [SerializeField] private GameObject chunkPrefab;
         [SerializeField] private TerrainSettings terrainSettings;
@@ -28,7 +30,7 @@ namespace Terrain
 
             CreateSortedOffsets();
             
-            for (int i = 0; i < 200; i++)
+            for (int i = 0; i < ChunkPoolSize; i++)
             {
                 var go = Instantiate(chunkPrefab, transform);
                 go.SetActive(false);
@@ -69,6 +71,7 @@ namespace Terrain
                 var chunk = _activeChunks[pos];
                 chunk.CancelAndClear();
                 chunk.gameObject.SetActive(false);
+                
                 _processingChunks.Remove(chunk);
                 _activeChunks.Remove(pos);
                 _chunkPool.Enqueue(chunk);

@@ -98,11 +98,11 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Height_Scaling: 1
+    - _Height_Scaling: 20
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
-    - _OffsetY: 0
+    - _OffsetY: -5
     - _Parallax: 0.02
     - _QueueControl: 0
     - _QueueOffset: 0
