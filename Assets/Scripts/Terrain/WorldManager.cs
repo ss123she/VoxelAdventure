@@ -6,22 +6,20 @@ namespace Terrain
 {
     public class WorldManager : MonoBehaviour
     {
-        private static short ChunkPoolSize = 450;
+        private static short ChunkPoolSize = 256;
+        
         [SerializeField] private Transform player;
         [SerializeField] private GameObject chunkPrefab;
         [SerializeField] private TerrainSettings terrainSettings;
-
-        [Header("Settings")]
-        [SerializeField] private int viewDistanceHorizontal = 8;
-        [SerializeField] private int viewDistanceVertical = 4; 
-        [SerializeField] private int chunksPerFrame = 5;
-
+        [SerializeField] private WorldManagerSettings worldManagerSettings;
+        
         private const int ChunkSize = NaiveSurfaceNets.Chunk.ChunkSizeMinusTwo;
         private readonly Dictionary<Vector3Int, Chunk> _activeChunks = new();
         private readonly List<Chunk> _processingChunks = new();
         private readonly Queue<Chunk> _chunkPool = new();
         private Vector3Int _lastPlayerChunk;
         private Vector3Int[] _chunkOffsets;
+        private bool _lastDebugState;
 
         private void Start()
         {
@@ -47,13 +45,26 @@ namespace Terrain
             var moved = playerChunk != _lastPlayerChunk;
             _lastPlayerChunk = playerChunk;
 
-            if (moved) UnloadChunks(playerChunk);
+            if (moved)
+            {
+                UnloadChunks(playerChunk);
+                UpdateChunkDebugInfo(playerChunk);
+            }
             LoadChunks(playerChunk);
+
+            if (_lastDebugState != worldManagerSettings.showDebugInfo)
+            {
+                _lastDebugState = worldManagerSettings.showDebugInfo;
+                RefreshDebugInfoVisibility();
+            }
+
             ProcessChunksLifecycle();
         }
 
         private void UnloadChunks(Vector3Int center)
         {
+            var viewDistanceHorizontal = worldManagerSettings.viewDistanceHorizontal;
+            var viewDistanceVertical = worldManagerSettings.viewDistanceVertical;
             var toRemove = new List<Vector3Int>();
             foreach (var kvp in _activeChunks)
             {
@@ -83,22 +94,23 @@ namespace Terrain
             int loadedCount = 0;
             foreach (var offset in _chunkOffsets)
             {
-                if (loadedCount >= chunksPerFrame) break;
+                if (loadedCount >= worldManagerSettings.chunksPerFrame) break;
 
                 var coord = center + offset;
                 if (_activeChunks.ContainsKey(coord)) continue;
 
-                if (Mathf.Abs(coord.y - center.y) > viewDistanceVertical) continue;
+                if (Mathf.Abs(coord.y - center.y) > worldManagerSettings.viewDistanceVertical) continue;
 
                 Chunk chunk = _chunkPool.Count > 0 ? _chunkPool.Dequeue() : Instantiate(chunkPrefab, transform).GetComponent<Chunk>();
                 
                 chunk.transform.SetPositionAndRotation((Vector3)coord * ChunkSize, Quaternion.identity);
                 chunk.ChunkCoordinate = coord;
                 chunk.gameObject.SetActive(true);
-                chunk.StartGeneration(terrainSettings);
+                chunk.StartGeneration(terrainSettings, worldManagerSettings.showDebugInfo);
 
                 _activeChunks.Add(coord, chunk);
                 _processingChunks.Add(chunk);
+                UpdateChunkDebugInfo(_lastPlayerChunk);
                 loadedCount++;
             }
         }
@@ -121,6 +133,9 @@ namespace Terrain
 
         private void CreateSortedOffsets()
         {
+            var viewDistanceHorizontal = worldManagerSettings.viewDistanceHorizontal;
+            var viewDistanceVertical = worldManagerSettings.viewDistanceVertical;
+
             var list = new List<Vector3Int>();
             for (int x = -viewDistanceHorizontal; x <= viewDistanceHorizontal; x++)
             for (int y = -viewDistanceVertical; y <= viewDistanceVertical; y++)
@@ -129,6 +144,30 @@ namespace Terrain
 
             list.Sort((a, b) => a.sqrMagnitude.CompareTo(b.sqrMagnitude));
             _chunkOffsets = list.ToArray();
+        }
+
+        private void UpdateChunkDebugInfo(Vector3Int playerChunkCoord)
+        {
+            foreach (var kvp in _activeChunks)
+            {
+                Chunk chunk = kvp.Value;
+                Vector3Int chunkCoord = kvp.Key;
+
+                var dx = Mathf.Abs(chunkCoord.x - playerChunkCoord.x);
+                var dy = Mathf.Abs(chunkCoord.y - playerChunkCoord.y);
+                var dz = Mathf.Abs(chunkCoord.z - playerChunkCoord.z);
+
+                int distance = Mathf.Max(dx, Mathf.Max(dy, dz));
+
+                chunk.DebugDistanceFromPlayer = distance;
+            }
+        }
+
+        private void RefreshDebugInfoVisibility()
+        {
+            bool show = worldManagerSettings.showDebugInfo;
+            foreach (var chunk in _activeChunks.Values)
+                chunk.SetDebugVisibility(show);
         }
     }
 }

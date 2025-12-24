@@ -4,6 +4,7 @@ using Terrain.Noise.Strategies;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -26,6 +27,23 @@ namespace Terrain
 
         public Vector3Int ChunkCoordinate { get; set; }
 
+        private bool isEmpty;
+        private int _debugDistanceFromPlayer;
+        public int DebugDistanceFromPlayer
+        {
+            get => _debugDistanceFromPlayer;
+            set
+            {
+                if (_debugDistanceFromPlayer != value)
+                {
+                    _debugDistanceFromPlayer = value;
+                    UpdateDebugText();
+                }
+            }
+        }
+        
+        [SerializeField] private TextMesh debugTextMesh;
+
         private NaiveSurfaceNets.Chunk _data;
         private NaiveSurfaceNets.Mesher _mesher;
         private MeshFilter _meshFilter;
@@ -37,10 +55,19 @@ namespace Terrain
         private void Awake()
         {
             _meshFilter = GetComponent<MeshFilter>();
+
+                if (debugTextMesh != null) 
+                    debugTextMesh.gameObject.SetActive(false);
         }
 
-        public void StartGeneration(TerrainSettings settings)
+        public void StartGeneration(TerrainSettings settings, bool showDebugInfo)
         {
+            if (debugTextMesh != null)
+            {
+                bool shouldShow = showDebugInfo && ChunkCoordinate.y == 0;
+                debugTextMesh.gameObject.SetActive(shouldShow);
+            }
+
             if (_currentState != ChunkState.Idle) return;
 
             _data = new NaiveSurfaceNets.Chunk();
@@ -104,8 +131,11 @@ namespace Terrain
 
             _dataGenerationHandle.Complete();
             
+            isEmpty = false;
             if (IsUniform(_data.data))
             {
+                isEmpty = true;
+
                 _currentState = ChunkState.Ready;
                 _data.Dispose();
                 _data = null;
@@ -180,18 +210,26 @@ namespace Terrain
             _mesher = null;
 
             _currentState = ChunkState.Ready;
-        }        
+        }
+
         public void CancelAndClear()
         {
+            JobHandle dependency = default;
+
+            if (_currentState == ChunkState.GeneratingMesh)
+                dependency = _meshGenerationHandle;
+            else
+                dependency = _dataGenerationHandle;
+
             if (_data != null)
             {
-                _data.Dispose(_dataGenerationHandle);
+                _data.Dispose(dependency);
                 _data = null;
             }
 
             if (_mesher != null)
             {
-                _mesher.Dispose(_meshGenerationHandle);
+                _mesher.Dispose(dependency);
                 _mesher = null;
             }
 
@@ -223,6 +261,28 @@ namespace Terrain
                 if (currentSign != firstSign) return false;
             }
             return true;
+        }
+
+        private void UpdateDebugText()
+        {
+            if (debugTextMesh != null)
+                debugTextMesh.text = _debugDistanceFromPlayer.ToString();
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!isEmpty)
+            {
+                Gizmos.color = _debugDistanceFromPlayer == 1 ? Color.red : _currentState is ChunkState.GeneratingMesh or ChunkState.GeneratingData ? Color.blue : Color.green;
+                var size = new Vector3(ChunkSize, ChunkSize, ChunkSize);
+                Gizmos.DrawWireCube(transform.position + size/2, new Vector3(ChunkSize, ChunkSize, ChunkSize));
+            }
+        }
+
+        public void SetDebugVisibility(bool show)
+        {
+            if (debugTextMesh != null)
+                debugTextMesh.gameObject.SetActive(show && ChunkCoordinate.y == 0);
         }
     }
 }

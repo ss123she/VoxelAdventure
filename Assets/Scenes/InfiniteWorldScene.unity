@@ -479,9 +479,7 @@ MonoBehaviour:
   player: {fileID: 1188564804}
   chunkPrefab: {fileID: 4797768151595128445, guid: afb66ddcf0580c206809f2abda8cc309, type: 3}
   terrainSettings: {fileID: 11400000, guid: 3eb065ca393774be8bd89448ffa9dbed, type: 2}
-  viewDistanceHorizontal: 20
-  viewDistanceVertical: 2
-  chunksPerFrame: 25
+  worldManagerSettings: {fileID: 11400000, guid: 5a3dd2b23e1f0e628bc4113507a4994c, type: 2}
 --- !u!1 &1188564803
 GameObject:
   m_ObjectHideFlags: 0
@@ -508,7 +506,7 @@ Transform:
   m_GameObject: {fileID: 1188564803}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 50, z: 0}
+  m_LocalPosition: {x: 0, y: 100, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -527,7 +525,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eaf981c85e3ce83e886cc84267339eff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMover
-  speed: 100
+  moveSpeed: 100
+  sensitivity: 10
+  maxVerticalAngle: 90
+  moveAction: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  lookAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  switchStateAction: {fileID: 1781555164194001046, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &1717756492
 GameObject:
   m_ObjectHideFlags: 0
@@ -558,6 +561,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameMenu
   settings: {fileID: 11400000, guid: 3eb065ca393774be8bd89448ffa9dbed, type: 2}
+  worldManagerSettings: {fileID: 11400000, guid: 5a3dd2b23e1f0e628bc4113507a4994c, type: 2}
   toggleKey: 9
 --- !u!4 &1717756494
 Transform:

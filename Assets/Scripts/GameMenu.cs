@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Reflection;
-using UnityEditor;
+using Terrain;
 
 public class GameMenu : MonoBehaviour
 {
     [Header("Settings Config")]
     [SerializeField] private Terrain.TerrainSettings settings;
+    [SerializeField] private WorldManagerSettings worldManagerSettings;
     [SerializeField] private KeyCode toggleKey = KeyCode.Tab;
     
     private GUIStyle _windowStyle;
@@ -104,7 +105,6 @@ public class GameMenu : MonoBehaviour
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Бесконечный Мир", _buttonStyle)) LoadScene("InfiniteWorldScene");
-        if (GUILayout.Button("Один Чанк", _buttonStyle)) LoadScene("ChunkShowcaseScene");
         GUILayout.EndHorizontal();
     }
 
@@ -117,28 +117,25 @@ public class GameMenu : MonoBehaviour
         if (settings != null)
         {
             DrawAutoSettings(settings);
-            
-            GUILayout.Space(15);
-
-            GUI.backgroundColor = Color.green;
-            if (GUILayout.Button("Перегенерировать", _buttonStyle))
-            {
-                var worldManager = FindObjectOfType<Terrain.WorldManager>();
-                if (worldManager != null)
-                {
-                     SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-                }
-
-                var showcase = FindObjectOfType<Terrain.ChunkShowcase>();
-                if (showcase != null)
-                {
-                    showcase.Regenerate();
-                }
-            }
-            GUI.backgroundColor = Color.white;
         }
-        else
-            GUILayout.Label("Файл настроек не привязан!", _labelStyle);
+
+        GUILayout.Space(15);
+
+        GUILayout.Label("ПАРАМЕТРЫ ПРОРИСОВКИ", _headerStyle);
+
+        if (worldManagerSettings != null)
+            DrawAutoSettings(worldManagerSettings);
+        
+        GUILayout.Space(15);
+
+        GUI.backgroundColor = Color.green;
+        if (GUILayout.Button("Перегенерировать", _buttonStyle))
+        {
+            var worldManager = FindFirstObjectByType<Terrain.WorldManager>();
+            if (worldManager != null)
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+        GUI.backgroundColor = Color.white;
 
         GUILayout.EndScrollView();
     }
