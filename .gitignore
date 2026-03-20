@@ -11,7 +11,13 @@
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 *.log
-
+Test_Data/
+UnityPlayer.so
+libdecor-0.so.0
+libdecor-cairo.so
+.idea/
+.plastic/
+.vscode/
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
 *.blend1.meta
