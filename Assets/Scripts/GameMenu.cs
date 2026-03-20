@@ -85,12 +85,8 @@ public class GameMenu : MonoBehaviour
 
     private void DrawWindowContent(int windowID)
     {
-        GUILayout.Label("ПАНЕЛЬ УПРАВЛЕНИЯ", _headerStyle);
+        GUILayout.Label("CONTROL PANEL", _headerStyle);
         DrawLine(new Color(0.5f, 0.5f, 0.5f, 0.3f));
-
-        GUILayout.Space(10);
-
-        ScenesTab();
         
         GUILayout.Space(15);
 
@@ -99,18 +95,9 @@ public class GameMenu : MonoBehaviour
         GUI.DragWindow();
     }
 
-    private void ScenesTab()
-    {
-        GUILayout.Label("РЕЖИМЫ", _headerStyle);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Бесконечный Мир", _buttonStyle)) LoadScene("InfiniteWorldScene");
-        GUILayout.EndHorizontal();
-    }
-
     private void SettingsTab()
     {
-        GUILayout.Label("ПАРАМЕТРЫ ГЕНЕРАЦИИ", _headerStyle);
+        GUILayout.Label("GENERATION SETTINGS", _headerStyle);
         
         _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, false, false);
         
@@ -121,7 +108,7 @@ public class GameMenu : MonoBehaviour
 
         GUILayout.Space(15);
 
-        GUILayout.Label("ПАРАМЕТРЫ ПРОРИСОВКИ", _headerStyle);
+        GUILayout.Label("VIEW DISTANCE SETTINGS", _headerStyle);
 
         if (worldManagerSettings != null)
             DrawAutoSettings(worldManagerSettings);
@@ -129,7 +116,7 @@ public class GameMenu : MonoBehaviour
         GUILayout.Space(15);
 
         GUI.backgroundColor = Color.green;
-        if (GUILayout.Button("Перегенерировать", _buttonStyle))
+        if (GUILayout.Button("REGENERATE", _buttonStyle))
         {
             var worldManager = FindFirstObjectByType<Terrain.WorldManager>();
             if (worldManager != null)
