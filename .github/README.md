@@ -4,7 +4,7 @@ This project was created to try to implement smooth terrain generation with Jobs
 
 ![alt text](https://github.com/ss123she/VoxelAdventure/blob/master/image.png)
 
-![Demo](https://github.com/ss123she/VoxelAdventure/blob/master/.github/video.mp4)
+https://github.com/user-attachments/assets/f8a07d78-136c-404f-a438-05da0ac3356a
 
 ## Requirements
 
