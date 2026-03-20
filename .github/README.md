@@ -4,6 +4,8 @@ This project was created to try to implement smooth terrain generation with Jobs
 
 ![alt text](https://github.com/ss123she/VoxelAdventure/blob/master/image.png)
 
+![Demo](https://github.com/ss123she/VoxelAdventure/blob/master/.github/video.mp4)
+
 ## Requirements
 
 - Unity (i used 6000.2.3f1)
